@@ -1,0 +1,81 @@
+﻿@model WebUI.Models.Document
+
+@{
+    ViewBag.Title = "Review";
+}
+
+<h2>Edit DocShare</h2>
+
+<script src="@Url.Content("~/Scripts/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Scripts/jquery.validate.unobtrusive.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Scripts/jquery.signalR.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Scripts/json2.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Scripts/diff_match_patch.js")" type="text/javascript"></script>
+<script src="/signalr/hubs" type="text/javascript"></script>
+@using (Html.BeginForm()) {
+    @Html.ValidationSummary(true)
+    <fieldset>
+        <legend>Document</legend>
+
+        @Html.HiddenFor(model => model.Id)
+
+        <div class="editor-label">
+            @Html.LabelFor(model => model.Title)
+        </div>
+        <div class="editor-field">
+            @Html.EditorFor(model => model.Title)
+            @Html.ValidationMessageFor(model => model.Title)
+        </div>
+
+        <div class="editor-label">
+            @Html.LabelFor(model => model.DocumentBody)
+        </div>
+        <div class="editor-field">
+            @Html.EditorFor(model => model.DocumentBody)
+            @Html.ValidationMessageFor(model => model.DocumentBody)
+        </div>
+
+        <p>
+            <input type="submit" value="Save" />
+            Session ID: <input id="sessinId" value="@Session.SessionID" disabled="disabled" />
+        </p>
+    </fieldset>
+}
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        // Proxy created on the fly
+        var doc = $.connection.docHub;
+        //Create instance of the diff-match-patch javascript class
+        var dmp = new diff_match_patch();
+        // Declare a function on the blog hub so the server can invoke it
+        doc.addMessage = function (message, sessnId) {
+            var sessId = $('#sessinId').val();
+            if (sessId != sessnId) // if this is not the page that initated
+            // the publish
+            {
+                dmp.Match_Distance = 1000;
+                dmp.Match_Threshold = 0.5;
+                dmp.Patch_DeleteThreshold = 0.5;
+                // Diff between text currently in text box and 'message' sent
+                // by hub
+                var patches = dmp.patch_make($('#DocumentBody').val(), message);
+                // Get the patch results
+                var results = dmp.patch_apply(patches, $('#DocumentBody').val());
+                // Set the patch value in the current client
+                $('#DocumentBody').val(results[0]);
+            }
+        };
+        // Start the connection
+        $.connection.hub.start();
+        // Send message to hub saying text may have changed
+        $("#DocumentBody").keyup(function (event) {
+            var sessId = $("#sessinId").val();
+            doc.send($("#DocumentBody").val(), sessId);
+        });
+    });
+</script>

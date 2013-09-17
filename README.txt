@@ -1,0 +1,1 @@
+Just a sample prototype idea I had for SignalR...kind of like Google docs with realtime updating of documents
